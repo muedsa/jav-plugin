@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TvBoxDemoPlugin"
+rootProject.name = "jav-plugin"
 include(":app")
 include(":api")
 project(":api").projectDir = rootDir.resolve("./TvBoxPlugin/api/")

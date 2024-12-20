@@ -75,9 +75,8 @@ class MediaDetailService(
             description = videoEl.select("#details .content .detail-item >div")
                 .joinToString("\n") { divEl ->
                     val label = divEl.child(0).text().trim()
-                    val descr =
-                        divEl.child(1).children().joinToString(" | ") { it.text().trim() }
-                    "$label: $descr"
+                    val descr = divEl.child(1).text()
+                    "$label $descr"
                 },
             detailUrl = detailUrl,
             backgroundImageUrl = imgUrl,

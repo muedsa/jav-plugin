@@ -16,6 +16,7 @@ import okhttp3.Request
 
 class MediaCatalogService(
     private val okHttpClient: OkHttpClient,
+    private val mediaSearchService: MediaSearchService,
 ) : IMediaCatalogService {
 
     override suspend fun getConfig(): MediaCatalogConfig {
@@ -37,7 +38,7 @@ class MediaCatalogService(
             "${JavConsts.SITE_BASE_URL}/search"
                 .toHttpUrl()
                 .newBuilder()
-                .setQueryParameter("keyword", "")
+                .setQueryParameter("keyword", mediaSearchService.lastQuery)
                 .setQueryParameter("page", loadKey)
                 .build()
         ).feignChrome()

@@ -31,7 +31,12 @@ class JavPlugin(tvBoxContext: TvBoxContext) : IPlugin(tvBoxContext = tvBoxContex
     private val mainScreenService by lazy { MainScreenService(okHttpClient = okHttpClient) }
     private val mediaDetailService by lazy { MediaDetailService(okHttpClient = okHttpClient) }
     private val mediaSearchService by lazy { MediaSearchService(okHttpClient = okHttpClient) }
-    private val mediaCatalogService by lazy { MediaCatalogService(okHttpClient = okHttpClient) }
+    private val mediaCatalogService by lazy {
+        MediaCatalogService(
+            okHttpClient = okHttpClient,
+            mediaSearchService = mediaSearchService,
+        )
+    }
 
     override fun provideMainScreenService(): IMainScreenService = mainScreenService
 

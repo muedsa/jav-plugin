@@ -16,7 +16,10 @@ class MediaSearchService(
     private val okHttpClient: OkHttpClient,
 ) : IMediaSearchService {
 
+    var lastQuery: String = ""
+
     override suspend fun searchMedias(query: String): MediaCardRow {
+        lastQuery = query
         val body = Request.Builder().url(
             "${JavConsts.SITE_BASE_URL}/search"
                 .toHttpUrl()

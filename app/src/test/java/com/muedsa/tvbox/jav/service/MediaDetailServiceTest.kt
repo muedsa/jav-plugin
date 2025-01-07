@@ -15,7 +15,7 @@ class MediaDetailServiceTest {
 
     @Test
     fun getDetailData_test() = runTest{
-        val detail = service.getDetailData("v/vec-674", "v/vec-674")
+        val detail = service.getDetailData("dm1/v/vec-674", "dm1/v/vec-674")
         check(detail.id.isNotEmpty())
         check(detail.title.isNotEmpty())
         check(detail.detailUrl.isNotEmpty())
@@ -42,7 +42,7 @@ class MediaDetailServiceTest {
 
     @Test
     fun getEpisodePlayInfo_test() = runTest{
-        val detail = service.getDetailData("v/vec-674", "v/vec-674")
+        val detail = service.getDetailData("dm1/v/vec-674", "dm1/v/vec-674")
         check(detail.playSourceList.isNotEmpty())
         check(detail.playSourceList.flatMap { it.episodeList }.isNotEmpty())
         val mediaPlaySource = detail.playSourceList[0]

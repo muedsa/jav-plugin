@@ -28,7 +28,7 @@ class MediaDetailService(
 ) : IMediaDetailService {
 
     override suspend fun getDetailData(mediaId: String, detailUrl: String): MediaDetail {
-        val pageUrl = "${JavConsts.SITE_BASE_URL}/dm1/$mediaId"
+        val pageUrl = "${JavConsts.SITE_BASE_URL}/$mediaId"
         val body = pageUrl.toRequestBuild()
             .feignChrome()
             .get(okHttpClient = okHttpClient)

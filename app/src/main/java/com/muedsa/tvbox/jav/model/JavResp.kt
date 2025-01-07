@@ -6,4 +6,5 @@ import kotlinx.serialization.Serializable
 data class JavResp<T>(
     val status: Int = 0,
     val data: T? = null,
+    val result: T? = null,
 )

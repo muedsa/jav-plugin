@@ -28,7 +28,7 @@ class MediaDetailService(
 ) : IMediaDetailService {
 
     override suspend fun getDetailData(mediaId: String, detailUrl: String): MediaDetail {
-        val pageUrl = "${JavConsts.SITE_BASE_URL}/$mediaId"
+        val pageUrl = "${JavConsts.SITE_BASE_URL}/dm1/$mediaId"
         val body = pageUrl.toRequestBuild()
             .feignChrome()
             .get(okHttpClient = okHttpClient)
@@ -50,12 +50,13 @@ class MediaDetailService(
                 .checkSuccess()
                 .stringBody()
             val javVideos = LenientJson.decodeFromString<JavResp<JavVideos>>(respJson)
-            if (javVideos.status == 200 && javVideos.data?.watch?.isNotEmpty() == true) {
+            val watch = javVideos.result?.watch ?: javVideos.data?.watch
+            if (javVideos.status == 200 && watch?.isNotEmpty() == true) {
                 mediaPlaySources.add(
                     MediaPlaySource(
                         id = "javplayer",
                         name = "javplayer",
-                        episodeList = javVideos.data.watch.map {
+                        episodeList = watch.map {
                             MediaEpisode(
                                 id = "$movieId:${it.name}",
                                 name = "部分 ${it.name}",

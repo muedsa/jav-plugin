@@ -2,6 +2,7 @@ package com.muedsa.tvbox.jav.service
 
 import com.muedsa.tvbox.api.data.DanmakuData
 import com.muedsa.tvbox.api.data.DanmakuDataFlow
+import com.muedsa.tvbox.api.data.MediaCard
 import com.muedsa.tvbox.api.data.MediaCardRow
 import com.muedsa.tvbox.api.data.MediaDetail
 import com.muedsa.tvbox.api.data.MediaEpisode
@@ -69,6 +70,26 @@ class MediaDetailService(
             }
         }
         val rows = mutableListOf<MediaCardRow>()
+        body.select("#app #body .container .row .col-sidebar >section").forEachIndexed { index, sectionEl ->
+            rows.add(
+                MediaCardRow(
+                    title = "推荐 ${index + 1}",
+                    cardWidth = JavConsts.CARD_WIDTH,
+                    cardHeight = JavConsts.CARD_HEIGHT,
+                    list = sectionEl.select(".box-item-list .box-item").map { boxEl ->
+                        val aEl = boxEl.selectFirst(".thumb a")!!
+                        val id = aEl.attr("href")
+                        MediaCard(
+                            id = id,
+                            title = aEl.attr("title").trim(),
+                            detailUrl = id,
+                            coverImageUrl = aEl.selectFirst("img")!!.attr("data-src"),
+                            subTitle = boxEl.selectFirst(".detail a")?.text()?.trim()
+                        )
+                    },
+                )
+            )
+        }
         return MediaDetail(
             id = mediaId,
             title = title,

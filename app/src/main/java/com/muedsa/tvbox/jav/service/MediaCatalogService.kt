@@ -3,6 +3,7 @@ package com.muedsa.tvbox.jav.service
 import com.muedsa.tvbox.api.data.MediaCard
 import com.muedsa.tvbox.api.data.MediaCatalogConfig
 import com.muedsa.tvbox.api.data.MediaCatalogOption
+import com.muedsa.tvbox.api.data.MediaCatalogOptionItem
 import com.muedsa.tvbox.api.data.PagingResult
 import com.muedsa.tvbox.api.service.IMediaCatalogService
 import com.muedsa.tvbox.jav.JavConsts
@@ -25,7 +26,56 @@ class MediaCatalogService(
             pageSize = 12,
             cardWidth = JavConsts.CARD_WIDTH,
             cardHeight = JavConsts.CARD_HEIGHT,
-            catalogOptions = emptyList()
+            catalogOptions = listOf(
+                MediaCatalogOption(
+                    name = "排序",
+                    value = "sort",
+                    items = listOf(
+                        MediaCatalogOptionItem(
+                            name = "默认",
+                            value = "",
+                            defaultChecked = true,
+                        ),
+                        MediaCatalogOptionItem(
+                            name = "发布日期",
+                            value = "release_date",
+                        ),
+                        MediaCatalogOptionItem(
+                            name = "最近更新",
+                            value = "recent_update",
+                        ),
+                        MediaCatalogOptionItem(
+                            name = "热门",
+                            value = "trending",
+                        ),
+                        MediaCatalogOptionItem(
+                            name = "热门",
+                            value = "trending",
+                        ),
+                        MediaCatalogOptionItem(
+                            name = "今天最多观看",
+                            value = "most_viewed_today",
+                        ),
+                        MediaCatalogOptionItem(
+                            name = "本周最多观看",
+                            value = "most_viewed_week",
+                        ),
+                        MediaCatalogOptionItem(
+                            name = "本月最多观看",
+                            value = "most_viewed_month",
+                        ),
+                        MediaCatalogOptionItem(
+                            name = "最多观看",
+                            value = "most_viewed",
+                        ),
+                        MediaCatalogOptionItem(
+                            name = "最受欢迎",
+                            value = "most_favourited",
+                        ),
+                    ),
+                    required = true,
+                )
+            )
         )
     }
 
@@ -47,10 +97,10 @@ class MediaCatalogService(
             .parseHtml()
             .body()
 
-        val navEl = body.selectFirst("#body >.container >div >nav")
-        val prevUrl = navEl?.child(0)?.selectFirst("a")?.attr("href")
-        val nextUrl = navEl?.child(2)?.selectFirst("a")?.attr("href")
-        return PagingResult<MediaCard>(
+        val paginationEl = body.selectFirst("#page-nav .navigation .pagination")
+        val prevUrl = paginationEl?.selectFirst(".page-item .page-link[rel=\"prev\"]")?.attr("href")
+        val nextUrl = paginationEl?.selectFirst(".page-item .page-link[rel=\"next\"]")?.attr("href")
+        return PagingResult(
             list = body.select("#body .box-item-list .box-item").map { boxEl ->
                 val aEl = boxEl.selectFirst(".thumb a")!!
                 val id = aEl.attr("href")
@@ -62,12 +112,28 @@ class MediaCatalogService(
                     subTitle = boxEl.selectFirst(".detail a")?.text()?.trim()
                 )
             },
-            nextKey = nextUrl?.let { PAGE_NUM_REGEX.find(it)?.groups[1]?.value },
-            prevKey = prevUrl?.let { PAGE_NUM_REGEX.find(it)?.groups[1]?.value },
+            nextKey = nextUrl?.let { PAGE_NUM_REGEX.find(it)?.groups[1]?.value } ?: getPrevNum(
+                loadKey
+            ),
+            prevKey = prevUrl?.let { PAGE_NUM_REGEX.find(it)?.groups[1]?.value } ?: getNextNum(
+                loadKey
+            ),
         )
     }
 
     companion object {
         val PAGE_NUM_REGEX = "page=(\\d+)".toRegex()
+
+        fun getPrevNum(current: String): String? {
+            return current.toIntOrNull()?.let {
+                if (it > 1) "${it - 1}" else null
+            }
+        }
+
+        fun getNextNum(current: String): String? {
+            return current.toIntOrNull()?.let {
+                "${it + 1}"
+            }
+        }
     }
 }

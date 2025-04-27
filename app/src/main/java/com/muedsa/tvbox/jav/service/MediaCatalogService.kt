@@ -49,10 +49,6 @@ class MediaCatalogService(
                             value = "trending",
                         ),
                         MediaCatalogOptionItem(
-                            name = "热门",
-                            value = "trending",
-                        ),
-                        MediaCatalogOptionItem(
                             name = "今天最多观看",
                             value = "most_viewed_today",
                         ),
@@ -112,10 +108,10 @@ class MediaCatalogService(
                     subTitle = boxEl.selectFirst(".detail a")?.text()?.trim()
                 )
             },
-            nextKey = nextUrl?.let { PAGE_NUM_REGEX.find(it)?.groups[1]?.value } ?: getPrevNum(
+            nextKey = nextUrl?.let { PAGE_NUM_REGEX.find(it)?.groups[1]?.value } ?: getNextNum(
                 loadKey
             ),
-            prevKey = prevUrl?.let { PAGE_NUM_REGEX.find(it)?.groups[1]?.value } ?: getNextNum(
+            prevKey = prevUrl?.let { PAGE_NUM_REGEX.find(it)?.groups[1]?.value } ?: getPrevNum(
                 loadKey
             ),
         )

@@ -1,6 +1,7 @@
 package com.muedsa.tvbox.jav.service
 
 import com.muedsa.tvbox.api.data.MediaCatalogOption
+import com.muedsa.tvbox.api.data.MediaCatalogOptionItem
 import com.muedsa.tvbox.jav.TestPlugin
 import com.muedsa.tvbox.jav.checkMediaCard
 import kotlinx.coroutines.test.runTest
@@ -26,25 +27,39 @@ class MediaCatalogServiceTest {
     @Test
     fun catalog_test() = runTest {
         val config = service.getConfig()
-        var pagingResult = service.catalog(
+        val page1 = service.catalog(
             options = MediaCatalogOption.getDefault(config.catalogOptions),
             loadKey = config.initKey,
             loadSize = config.pageSize
         )
-        check(pagingResult.list.isNotEmpty())
-        pagingResult.list.forEach {
+        check(page1.list.isNotEmpty())
+        page1.list.forEach {
             checkMediaCard(it, config.cardType)
         }
-        check(pagingResult.nextKey != null)
-        pagingResult = service.catalog(
-            options = MediaCatalogOption.getDefault(config.catalogOptions),
-            loadKey = pagingResult.nextKey!!,
+        check(page1.nextKey != null)
+        val page2 = service.catalog(
+            options = listOf(
+                MediaCatalogOption(
+                    name = "排序",
+                    value = "sort",
+                    items = listOf(
+                        MediaCatalogOptionItem(
+                            name = "发布日期",
+                            value = "release_date",
+                        ),
+                    ),
+                    required = true,
+                )
+            ),
+            loadKey = page1.nextKey!!,
             loadSize = config.pageSize
         )
-        check(pagingResult.list.isNotEmpty())
-        pagingResult.list.forEach {
+        check(page2.list.isNotEmpty())
+        page2.list.forEach {
             checkMediaCard(it, config.cardType)
         }
+        check(page2.nextKey != null)
+        check(page2.prevKey === page1.nextKey)
     }
 
 }

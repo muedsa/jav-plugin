@@ -80,12 +80,14 @@ class MediaCatalogService(
         loadKey: String,
         loadSize: Int
     ): PagingResult<MediaCard> {
+        val sort = options.find { it.value === "sort" }?.items[0]?.value ?: ""
         val body = Request.Builder().url(
             "${JavConsts.SITE_BASE_URL}/search"
                 .toHttpUrl()
                 .newBuilder()
                 .setQueryParameter("keyword", mediaSearchService.lastQuery)
                 .setQueryParameter("page", loadKey)
+                .setQueryParameter("sort", sort)
                 .build()
         ).feignChrome()
             .get(okHttpClient = okHttpClient)

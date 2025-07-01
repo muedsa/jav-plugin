@@ -34,7 +34,6 @@ class MediaCatalogService(
                         MediaCatalogOptionItem(
                             name = "默认",
                             value = "",
-                            defaultChecked = true,
                         ),
                         MediaCatalogOptionItem(
                             name = "发布日期",
@@ -51,6 +50,7 @@ class MediaCatalogService(
                         MediaCatalogOptionItem(
                             name = "今天最多观看",
                             value = "most_viewed_today",
+                            defaultChecked = true,
                         ),
                         MediaCatalogOptionItem(
                             name = "本周最多观看",

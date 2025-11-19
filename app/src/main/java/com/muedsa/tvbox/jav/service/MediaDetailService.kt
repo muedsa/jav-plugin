@@ -8,13 +8,12 @@ import com.muedsa.tvbox.api.data.MediaDetail
 import com.muedsa.tvbox.api.data.MediaEpisode
 import com.muedsa.tvbox.api.data.MediaHttpSource
 import com.muedsa.tvbox.api.data.MediaPlaySource
+import com.muedsa.tvbox.api.data.MediaSniffingSource
 import com.muedsa.tvbox.api.data.SavedMediaCard
 import com.muedsa.tvbox.api.service.IMediaDetailService
 import com.muedsa.tvbox.jav.JavConsts
-import com.muedsa.tvbox.jav.model.JavPlayerVideoInfo
 import com.muedsa.tvbox.jav.model.JavResp
 import com.muedsa.tvbox.jav.model.JavVideos
-import com.muedsa.tvbox.tool.ChromeUserAgent
 import com.muedsa.tvbox.tool.LenientJson
 import com.muedsa.tvbox.tool.checkSuccess
 import com.muedsa.tvbox.tool.feignChrome
@@ -29,7 +28,7 @@ class MediaDetailService(
 ) : IMediaDetailService {
 
     override suspend fun getDetailData(mediaId: String, detailUrl: String): MediaDetail {
-        val pageUrl = "${JavConsts.SITE_BASE_URL}/$mediaId"
+        val pageUrl = "${JavConsts.SITE_BASE_URL}/$detailUrl"
         val body = pageUrl.toRequestBuild()
             .feignChrome()
             .get(okHttpClient = okHttpClient)
@@ -78,7 +77,8 @@ class MediaDetailService(
                     cardHeight = JavConsts.CARD_HEIGHT,
                     list = sectionEl.select(".box-item-list .box-item").map { boxEl ->
                         val aEl = boxEl.selectFirst(".thumb a")!!
-                        val id = aEl.attr("href")
+                        val url = aEl.absUrl("href")
+                        val id = url.removePrefix("${JavConsts.SITE_BASE_URL}/")
                         MediaCard(
                             id = id,
                             title = aEl.attr("title").trim(),
@@ -120,23 +120,8 @@ class MediaDetailService(
         playSource: MediaPlaySource,
         episode: MediaEpisode
     ): MediaHttpSource {
-        val url = episode.flag5 ?: throw RuntimeException("解析播放地址失败")
-        val referer = episode.flag6 ?: throw RuntimeException("解析播放地址失败")
-        val body = url.toRequestBuild()
-            .feignChrome(referer = referer)
-            .get(okHttpClient = okHttpClient)
-            .checkSuccess()
-            .parseHtml()
-            .body()
-        val videoInfoJson = VIDEO_INFO_REGEX.find(body.selectFirst("#player")!!.attr("v-scope"))?.groups[2]?.value
-            ?: throw RuntimeException("解析播放地址失败")
-        val videoInfo = LenientJson.decodeFromString<JavPlayerVideoInfo>(videoInfoJson)
-        return MediaHttpSource(
-            url = videoInfo.stream,
-            httpHeaders = mapOf(
-                "Referer" to url,
-                "User-Agent" to ChromeUserAgent,
-            ),
+        return MediaSniffingSource(
+            url = episode.flag6 ?: throw RuntimeException("解析播放地址失败"),
         )
     }
 
@@ -147,22 +132,5 @@ class MediaDetailService(
 
     companion object {
         val MOVIE_INFO_REGEX = "Movie\\(\\{id: (\\d+), code: '(.*?)'\\}\\)".toRegex()
-        val VIDEO_INFO_REGEX = "Video\\((\\d+), (\\{.*?\\})\\)".toRegex()
-//        fun unescapeHtml(input: String): String {
-//            return input
-//                .replace("&quot;", "\"")
-//                .replace("&apos;", "'")
-//                .replace("&amp;", "&")
-//                .replace("&lt;", "<")
-//                .replace("&gt;", ">")
-//                .replace("&nbsp;", " ")
-//                .replace("&#34;", "\"")
-//                .replace("&#39;", "'")
-//                .replace("&#38;", "&")
-//                .replace("&#60;", "<")
-//                .replace("&#62;", ">")
-//                .replace("&#160;", " ")
-//        }
-
     }
 }

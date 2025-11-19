@@ -16,16 +16,26 @@ class MainScreenService(
 ) : IMainScreenService {
 
     override suspend fun getRowsData(): List<MediaCardRow> {
-        val body = "${JavConsts.SITE_BASE_URL}/dm1/".toRequestBuild()
+        var body = "${JavConsts.SITE_BASE_URL}/".toRequestBuild()
             .feignChrome()
             .get(okHttpClient = okHttpClient)
             .checkSuccess()
             .parseHtml()
             .body()
+        body.selectFirst("#logo a.logo")
+            ?.absUrl("href")
+            ?.toRequestBuild()
+            ?.feignChrome()
+            ?.get(okHttpClient = okHttpClient)
+            ?.checkSuccess()
+            ?.parseHtml()
+            ?.body()
+            ?.let { body = it }
         val rows = mutableListOf<MediaCardRow>()
         val topCards = body.select("#body #top-carousel .box-item-list .box-item").map { boxEl ->
             val aEl = boxEl.selectFirst("a[href]")!!
-            val id = aEl.attr("href")
+            val absUrl = aEl.absUrl("href")
+            val id = absUrl.removePrefix("${JavConsts.SITE_BASE_URL}/")
             MediaCard(
                 id = id,
                 title = aEl.selectFirst(".name")!!.text().trim(),
@@ -52,7 +62,8 @@ class MainScreenService(
                     cardHeight = JavConsts.CARD_HEIGHT,
                     list = sectionEl.select(".box-item-list .box-item").map { boxEl ->
                         val aEl = boxEl.selectFirst(".thumb a")!!
-                        val id = aEl.attr("href")
+                        val absUrl = aEl.absUrl("href")
+                        val id = absUrl.removePrefix("${JavConsts.SITE_BASE_URL}/")
                         MediaCard(
                             id = id,
                             title = aEl.attr("title").trim(),

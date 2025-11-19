@@ -18,12 +18,12 @@ val TestOkHttpClient by lazy {
         cookieJar = PluginCookieJar(saver = TestCookieSaver),
         onlyIpv4 = true,
     ) {
-//        proxy(
-//            Proxy(
-//                Proxy.Type.SOCKS,
-//                InetSocketAddress("127.0.0.1", 23333)
-//            )
-//        )
+        proxy(
+            java.net.Proxy(
+                java.net.Proxy.Type.SOCKS,
+                java.net.InetSocketAddress("127.0.0.1", 23333)
+            )
+        )
     }
 }
 

@@ -21,7 +21,7 @@ class MediaSearchService(
     override suspend fun searchMedias(query: String): MediaCardRow {
         lastQuery = query
         val body = Request.Builder().url(
-            "${JavConsts.SITE_BASE_URL}/search"
+            "${JavConsts.SITE_BASE_URL}${JavConsts.LANG_PATH}search"
                 .toHttpUrl()
                 .newBuilder()
                 .setQueryParameter("keyword", query)
@@ -35,15 +35,18 @@ class MediaSearchService(
             title = "search list",
             cardWidth = JavConsts.CARD_WIDTH,
             cardHeight = JavConsts.CARD_HEIGHT,
-            list = body.select("#body .box-item-list .box-item").map { boxEl ->
-                val aEl = boxEl.selectFirst(".thumb a")!!
-                val id = aEl.attr("href")
+            list = body.select(".app main.feed .grid .card").map { cardEl ->
+                val aEl = cardEl.selectFirst(".card__poster a[href]")!!
+                val id = aEl.attr("href").removePrefix(JavConsts.VIDEO_PATH_PREFIX)
+                val titleArr = cardEl.selectFirst(".card__body .card__title")!!.text().split(" — ")
+                val title = titleArr[0]
+                val subTitle = if (titleArr.size > 1) titleArr[1] else ""
                 MediaCard(
                     id = id,
-                    title = aEl.attr("title").trim(),
+                    title = title,
                     detailUrl = id,
-                    coverImageUrl = aEl.selectFirst("img")!!.attr("data-src"),
-                    subTitle = boxEl.selectFirst(".detail a")?.text()?.trim()
+                    coverImageUrl = aEl.selectFirst("img.card__img")!!.attr("src"),
+                    subTitle = subTitle
                 )
             }
         )

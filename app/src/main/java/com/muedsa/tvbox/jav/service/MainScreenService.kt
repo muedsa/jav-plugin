@@ -16,64 +16,63 @@ class MainScreenService(
 ) : IMainScreenService {
 
     override suspend fun getRowsData(): List<MediaCardRow> {
-        var body = "${JavConsts.SITE_BASE_URL}/".toRequestBuild()
+        val body = "${JavConsts.SITE_BASE_URL}${JavConsts.LANG_PATH}".toRequestBuild()
             .feignChrome()
             .get(okHttpClient = okHttpClient)
             .checkSuccess()
             .parseHtml()
             .body()
-        body.selectFirst("#logo a.logo")
-            ?.absUrl("href")
-            ?.toRequestBuild()
-            ?.feignChrome()
-            ?.get(okHttpClient = okHttpClient)
-            ?.checkSuccess()
-            ?.parseHtml()
-            ?.body()
-            ?.let { body = it }
         val rows = mutableListOf<MediaCardRow>()
-        val topCards = body.select("#body #top-carousel .box-item-list .box-item").map { boxEl ->
-            val aEl = boxEl.selectFirst("a[href]")!!
-            val absUrl = aEl.absUrl("href")
-            val id = absUrl.removePrefix("${JavConsts.SITE_BASE_URL}/")
-            MediaCard(
-                id = id,
-                title = aEl.selectFirst(".name")!!.text().trim(),
-                detailUrl = id,
-                coverImageUrl = aEl.selectFirst("img")!!.attr("src")
-            )
-        }
-        if (topCards.isNotEmpty()) {
-            rows.add(
-                MediaCardRow(
-                    title = "精选",
-                    cardWidth = JavConsts.CARD_WIDTH,
-                    cardHeight = JavConsts.CARD_HEIGHT,
-                    list = topCards,
-                )
-            )
-        }
-        body.select("#body .container >section").forEach { sectionEl ->
-            val rowTitle = sectionEl.selectFirst(".section-title .title h2")!!.text()
-            rows.add(
-                MediaCardRow(
-                    title = rowTitle,
-                    cardWidth = JavConsts.CARD_WIDTH,
-                    cardHeight = JavConsts.CARD_HEIGHT,
-                    list = sectionEl.select(".box-item-list .box-item").map { boxEl ->
-                        val aEl = boxEl.selectFirst(".thumb a")!!
-                        val absUrl = aEl.absUrl("href")
-                        val id = absUrl.removePrefix("${JavConsts.SITE_BASE_URL}/")
+        body.select("main.feed .wrap section").forEach { sectionEl ->
+            if (!sectionEl.hasClass("rec")) {
+                val swiperEl = sectionEl.selectFirst(".swiper")
+                if (swiperEl != null) {
+                    val topCards = swiperEl.select(".swiper-wrapper .swiper-slide").map { slideEl ->
+                        val aEl = slideEl.selectFirst(".featured .card__link")!!
+                        val id = aEl.attr("href").removePrefix(JavConsts.VIDEO_PATH_PREFIX)
                         MediaCard(
                             id = id,
-                            title = aEl.attr("title").trim(),
+                            title = aEl.selectFirst(".featured__title")!!.text().trim(),
                             detailUrl = id,
-                            coverImageUrl = aEl.selectFirst("img")!!.attr("data-src"),
-                            subTitle = boxEl.selectFirst(".detail a")?.text()?.trim()
+                            coverImageUrl = slideEl.selectFirst(".featured .featured__poster img.featured__img")!!.attr("src")
                         )
-                    },
-                )
-            )
+                    }
+                    rows.add(
+                        MediaCardRow(
+                            title = "精选",
+                            cardWidth = JavConsts.CARD_WIDTH,
+                            cardHeight = JavConsts.CARD_HEIGHT,
+                            list = topCards,
+                        )
+                    )
+                } else {
+                    val rowTitleEl = sectionEl.selectFirst(".section__head .section__title")
+                    if (rowTitleEl != null) {
+                        val rowTitle = rowTitleEl.text().trim()
+                        rows.add(
+                            MediaCardRow(
+                                title = rowTitle,
+                                cardWidth = JavConsts.CARD_WIDTH,
+                                cardHeight = JavConsts.CARD_HEIGHT,
+                                list = sectionEl.select(".grid .card").map { cardEl ->
+                                    val aEl = cardEl.selectFirst(".card__poster a[href]")!!
+                                    val id = aEl.attr("href").removePrefix(JavConsts.VIDEO_PATH_PREFIX)
+                                    val titleArr = cardEl.selectFirst(".card__body .card__title")!!.text().split(" — ")
+                                    val title = titleArr[0]
+                                    val subTitle = if (titleArr.size > 1) titleArr[1] else ""
+                                    MediaCard(
+                                        id = id,
+                                        title = title,
+                                        detailUrl = id,
+                                        coverImageUrl = aEl.selectFirst("img.card__img")!!.attr("src"),
+                                        subTitle = subTitle
+                                    )
+                                },
+                            )
+                        )
+                    }
+                }
+            }
         }
         return rows
     }

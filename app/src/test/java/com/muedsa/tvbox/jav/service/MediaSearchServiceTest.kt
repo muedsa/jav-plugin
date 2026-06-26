@@ -1,6 +1,6 @@
 package com.muedsa.tvbox.jav.service
 
-import com.muedsa.tvbox.jav.TestPlugin
+import com.muedsa.tvbox.jav.TestOkHttpClient
 import com.muedsa.tvbox.jav.checkMediaCardRow
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -12,11 +12,13 @@ import org.robolectric.annotation.Config
 @Config(sdk = [28])
 class MediaSearchServiceTest {
 
-    private val service = TestPlugin.provideMediaSearchService()
+    private val service = MediaSearchService(
+        okHttpClient = TestOkHttpClient,
+    )
 
     @Test
     fun searchMedias_test() = runTest {
-        val row = service.searchMedias("")
+        val row = service.searchMedias("123")
         checkMediaCardRow(row = row)
     }
 }

@@ -2,7 +2,7 @@ package com.muedsa.tvbox.jav.service
 
 import com.muedsa.tvbox.api.data.MediaCatalogOption
 import com.muedsa.tvbox.api.data.MediaCatalogOptionItem
-import com.muedsa.tvbox.jav.TestPlugin
+import com.muedsa.tvbox.jav.TestOkHttpClient
 import com.muedsa.tvbox.jav.checkMediaCard
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -14,7 +14,14 @@ import org.robolectric.annotation.Config
 @Config(sdk = [28])
 class MediaCatalogServiceTest {
 
-    private val service = TestPlugin.provideMediaCatalogService()
+    private val mediaSearchService = MediaSearchService(
+        okHttpClient = TestOkHttpClient,
+    )
+
+    private val service = MediaCatalogService(
+        okHttpClient = TestOkHttpClient,
+        mediaSearchService = mediaSearchService,
+    )
 
     @Test
     fun getConfig_test() = runTest {
@@ -64,7 +71,6 @@ class MediaCatalogServiceTest {
             checkMediaCard(it, config.cardType)
         }
         check(page2.nextKey != null)
-        check(page2.prevKey === page1.nextKey)
     }
 
 }

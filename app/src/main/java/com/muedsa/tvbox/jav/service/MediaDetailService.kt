@@ -12,14 +12,12 @@ import com.muedsa.tvbox.api.data.MediaSniffingSource
 import com.muedsa.tvbox.api.data.SavedMediaCard
 import com.muedsa.tvbox.api.service.IMediaDetailService
 import com.muedsa.tvbox.jav.JavConsts
-import com.muedsa.tvbox.jav.model.JavResp
-import com.muedsa.tvbox.jav.model.JavVideos
+import com.muedsa.tvbox.jav.model.ImgData
 import com.muedsa.tvbox.tool.LenientJson
 import com.muedsa.tvbox.tool.checkSuccess
 import com.muedsa.tvbox.tool.feignChrome
 import com.muedsa.tvbox.tool.get
 import com.muedsa.tvbox.tool.parseHtml
-import com.muedsa.tvbox.tool.stringBody
 import com.muedsa.tvbox.tool.toRequestBuild
 import okhttp3.OkHttpClient
 
@@ -28,87 +26,84 @@ class MediaDetailService(
 ) : IMediaDetailService {
 
     override suspend fun getDetailData(mediaId: String, detailUrl: String): MediaDetail {
-        val pageUrl = "${JavConsts.SITE_BASE_URL}/$detailUrl"
+        val pageUrl = "${JavConsts.SITE_BASE_URL}${JavConsts.VIDEO_PATH_PREFIX}$detailUrl"
         val body = pageUrl.toRequestBuild()
             .feignChrome()
             .get(okHttpClient = okHttpClient)
             .checkSuccess()
             .parseHtml()
             .body()
-        val videoEl = body.selectFirst("#app #body #page-video")!!
-        val longTitle = videoEl.selectFirst(">.row >.col >.d-flex >.mr-3 >h1")!!.text().trim()
-        var title = longTitle.split(" ")[0]
-        val imgUrl = videoEl.selectFirst("#player")!!.attr("data-poster")
-        val result = MOVIE_INFO_REGEX.find(videoEl.attr("v-scope"))
-        val mediaPlaySources = mutableListOf<MediaPlaySource>()
-        if (result != null && result.groups.size > 2) {
-            val movieId = result.groups[1]?.value!!
-            title = result.groups[2]?.value!!
-            val respJson = "${JavConsts.SITE_BASE_URL}/ajax/v/$movieId/videos".toRequestBuild()
-                .feignChrome(referer = pageUrl)
-                .get(okHttpClient = okHttpClient)
-                .checkSuccess()
-                .stringBody()
-            val javVideos = LenientJson.decodeFromString<JavResp<JavVideos>>(respJson)
-            val watch = javVideos.result?.watch ?: javVideos.data?.watch
-            if (javVideos.status == 200 && watch?.isNotEmpty() == true) {
-                mediaPlaySources.add(
-                    MediaPlaySource(
-                        id = "javplayer",
-                        name = "javplayer",
-                        episodeList = watch.map {
-                            MediaEpisode(
-                                id = "$movieId:${it.name}",
-                                name = "部分 ${it.name}",
-                                flag5 = it.url,
-                                flag6 = pageUrl,
-                            )
-                        }
-                    )
+        val videoEl = body.selectFirst(".app main.feed .watch .watch-layout .watch-main .watch__main")!!
+        val data = videoEl.attr("x-data")
+        val dataResult = VIDEO_DATA_REGEX.find(data)!!
+        val imgData = LenientJson.decodeFromString<List<ImgData>>(dataResult.groups[1]!!.value.replace("\\u0022", "\""))[0]
+        val imgUrl = imgData.url.replace("\\/", "/")
+        val titleArr = videoEl.selectFirst(".watch__head .watch__headinfo .watch__title")!!
+            .text()
+            .trim()
+            .split(" — ")
+        val title = titleArr[0]
+        val subTitle = if (titleArr.size > 1) titleArr[1] else titleArr[0]
+        val rows = mutableListOf<MediaCardRow>()
+        val sideEl = body.selectFirst(".app main.feed .watch .watch-layout .watch-side")
+        if (sideEl != null) {
+            val rowTitle = sideEl.selectFirst(".watch-side__title")!!.text().trim()
+            val cards = sideEl.select(".watch-side__list li a").map { aEl ->
+                val cardId = aEl.attr("href").removePrefix(JavConsts.VIDEO_PATH_PREFIX)
+                val cardTitleArr = aEl.selectFirst(".vside__body .vside__title")!!
+                    .text()
+                    .trim()
+                    .split(" — ")
+                val cardTitle = cardTitleArr[0]
+                val cardSubTitle = if (cardTitleArr.size > 1) cardTitleArr[1] else cardTitleArr[0]
+                MediaCard(
+                    id = cardId,
+                    title = cardTitle,
+                    detailUrl = cardId,
+                    subTitle = cardSubTitle,
+                    coverImageUrl = aEl.selectFirst(".vside__thumb")!!.attr("style")
+                        .removePrefix("background-image:url('")
+                        .removeSuffix("')")
                 )
             }
-        }
-        val rows = mutableListOf<MediaCardRow>()
-        body.select("#app #body .container .row .col-sidebar >section").forEachIndexed { index, sectionEl ->
-            rows.add(
-                MediaCardRow(
-                    title = "推荐 ${index + 1}",
-                    cardWidth = JavConsts.CARD_WIDTH,
-                    cardHeight = JavConsts.CARD_HEIGHT,
-                    list = sectionEl.select(".box-item-list .box-item").map { boxEl ->
-                        val aEl = boxEl.selectFirst(".thumb a")!!
-                        val url = aEl.absUrl("href")
-                        val id = url.removePrefix("${JavConsts.SITE_BASE_URL}/")
-                        MediaCard(
-                            id = id,
-                            title = aEl.attr("title").trim(),
-                            detailUrl = id,
-                            coverImageUrl = aEl.selectFirst("img")!!.attr("data-src"),
-                            subTitle = boxEl.selectFirst(".detail a")?.text()?.trim()
-                        )
-                    },
-                )
-            )
+            rows.add(MediaCardRow(
+                title = rowTitle,
+                cardWidth = JavConsts.CARD_WIDTH,
+                cardHeight = JavConsts.CARD_HEIGHT,
+                list = cards,
+            ))
         }
         return MediaDetail(
             id = mediaId,
             title = title,
-            subTitle = longTitle,
-            description = videoEl.select("#details .content .detail-item >div")
-                .joinToString("\n") { divEl ->
-                    val label = divEl.child(0).text().trim()
-                    val descr = divEl.child(1).text()
+            subTitle = subTitle,
+            description = videoEl.select(".watch__block .watch__info .watch__info-row")
+                .joinToString("\n") { rowEl ->
+                    val label = rowEl.child(0).text().trim()
+                    val descr = rowEl.child(1).text().trim()
                     "$label $descr"
                 },
             detailUrl = detailUrl,
             backgroundImageUrl = imgUrl,
-            playSourceList = mediaPlaySources,
+            playSourceList = listOf(
+                MediaPlaySource(
+                    id = "javplayer",
+                    name = "javplayer",
+                    episodeList = listOf(
+                        MediaEpisode(
+                            id = mediaId,
+                            name = mediaId,
+                            flag6 = pageUrl,
+                        )
+                    )
+                )
+            ),
             favoritedMediaCard = SavedMediaCard(
                 id = mediaId,
                 title = title,
                 detailUrl = detailUrl,
                 coverImageUrl = imgUrl,
-                subTitle = longTitle,
+                subTitle = subTitle,
                 cardWidth = JavConsts.CARD_WIDTH,
                 cardHeight = JavConsts.CARD_HEIGHT,
             ),
@@ -131,6 +126,6 @@ class MediaDetailService(
     override suspend fun getEpisodeDanmakuDataFlow(episode: MediaEpisode): DanmakuDataFlow? = null
 
     companion object {
-        val MOVIE_INFO_REGEX = "Movie\\(\\{id: (\\d+), code: '(.*?)'\\}\\)".toRegex()
+        val VIDEO_DATA_REGEX = "player\\(JSON.parse\\('(.*?)'\\), (\\d+), '(.*?)', '(.*?)', '(.*?)'\\)".toRegex()
     }
 }
